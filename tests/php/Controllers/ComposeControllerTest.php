@@ -66,7 +66,6 @@ class ComposeControllerTest extends FunctionalTest
         );
         Config::modify()->remove(ComposeTestElementalPage::class, 'allowed_elements');
         Config::modify()->remove(ComposeTestElementalPage::class, 'disallowed_elements');
-        ElementalAreasExtension::reset();
         parent::tearDown();
     }
 

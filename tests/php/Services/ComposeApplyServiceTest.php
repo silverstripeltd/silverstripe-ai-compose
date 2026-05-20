@@ -62,7 +62,6 @@ class ComposeApplyServiceTest extends SapphireTest
         Config::modify()->remove(ComposeTestElementalPage::class, 'disallowed_elements');
         Config::modify()->set(ComposePermissionControlledBlock::class, 'allow_create', true);
         Config::modify()->set(ComposePermissionControlledBlock::class, 'allow_create_element', true);
-        ElementalAreasExtension::reset();
         parent::tearDown();
     }
 
@@ -289,7 +288,6 @@ class ComposeApplyServiceTest extends SapphireTest
     {
         Config::modify()->set(ComposeTestElementalPage::class, 'allowed_elements', $allowed);
         Config::modify()->set(ComposeTestElementalPage::class, 'disallowed_elements', []);
-        ElementalAreasExtension::reset();
     }
 
     /**
@@ -299,6 +297,5 @@ class ComposeApplyServiceTest extends SapphireTest
     {
         Config::modify()->set(ComposePermissionControlledBlock::class, 'allow_create', $allowCreate);
         Config::modify()->set(ComposePermissionControlledBlock::class, 'allow_create_element', $allowCreateElement);
-        ElementalAreasExtension::reset();
     }
 }
