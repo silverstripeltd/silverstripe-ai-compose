@@ -1,0 +1,20 @@
+---
+Name: ai-compose
+---
+SilverStripe\CMS\Model\SiteTree:
+  extensions:
+    - SilverstripeLtd\AiCompose\Extensions\AiComposeExtension
+
+SilverstripeLtd\AiCompose\Services\ComposeApplyService:
+  default_content_block_class: 'DNADesign\Elemental\Models\ElementContent'
+
+SilverStripe\Control\Director:
+  rules:
+    'admin/ai-compose': SilverstripeLtd\AiCompose\Controllers\ComposeController
+
+SilverStripe\Admin\LeftAndMain:
+  extra_requirements_javascript:
+    'silverstripeltd/ai-compose:client/dist/js/bundle.js':
+      defer: true
+  extra_requirements_css:
+    - 'silverstripeltd/ai-compose:client/dist/styles/bundle.css'
