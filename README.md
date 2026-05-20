@@ -4,20 +4,22 @@ AI-assisted page composition for Silverstripe CMS.
 
 This module solves the editor "blank page" problem with a lightweight, on-demand workflow. Editors open a modal from the CMS page edit screen, provide a purpose and supporting facts, generate a draft title and body in one AI call, then preview, copy, or apply the result to Draft content. Generated results are cached only for the current CMS session and are never persisted to a module-owned table.
 
+![AI compose modal](docs/ai-compose-modal.png)
+
 ## Installation
 
-This module is hosted on a private GitHub repository and is not listed on Packagist. To install it, add the following to your project's `composer.json`:
+This module is currently not listed on Packagist. To install it, add the following to your project's `composer.json`:
 
 ```json
 {
     "repositories": [
         {
             "type": "vcs",
-            "url": "git@github.com:emteknetnz/silverstripe-ai-compose.git"
+            "url": "git@github.com:silverstripeltd/silverstripe-ai-compose.git"
         }
     ],
     "require": {
-        "silverstripeltd/ai-compose": "dev-main"
+        "silverstripeltd/ai-compose": "*"
     }
 }
 ```
