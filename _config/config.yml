@@ -5,6 +5,24 @@ SilverStripe\CMS\Model\SiteTree:
   extensions:
     - SilverstripeLtd\AiCompose\Extensions\AiComposeExtension
 
+# Compose provider defaults. AI_COMPOSE_* environment variables override them, then the
+# shared AI_* variables; the per provider entries win while that provider is selected.
+SilverstripeLtd\AiCore\Settings\EnvProviderSettings:
+  modules:
+    COMPOSE:
+      provider: gemini
+      max_tokens: 4000
+      request_timeout: 30
+      temperature: 1.0
+      providers:
+        anthropic:
+          model: claude-haiku-4-5
+        openai:
+          model: gpt-5-mini
+        gemini:
+          model: gemini-3.1-flash-lite
+          thinking_level: low
+
 SilverstripeLtd\AiCompose\Services\ComposeApplyService:
   default_content_block_class: 'DNADesign\Elemental\Models\ElementContent'
 

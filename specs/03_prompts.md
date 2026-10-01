@@ -67,7 +67,7 @@ The provider response is parsed as JSON. The parser requires:
 - A non-empty string `title` field
 - A non-empty string `content` field
 
-If either field is missing or empty, the response is treated as malformed and an `AIProviderException` is thrown.
+If either field is missing or empty, the response is treated as malformed and an `ProviderException` is thrown.
 
 ## Writing style and tone rules integration
 

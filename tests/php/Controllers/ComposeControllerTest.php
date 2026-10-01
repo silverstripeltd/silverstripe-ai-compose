@@ -7,15 +7,14 @@ use DNADesign\Elemental\Models\ElementContent;
 use DNADesign\Elemental\Extensions\ElementalAreasExtension;
 use SilverstripeLtd\AiCompose\Controllers\ComposeController;
 use SilverstripeLtd\AiCompose\Forms\ComposeForm;
-use SilverstripeLtd\AiCompose\Providers\ProviderFactory;
 use SilverstripeLtd\AiCompose\Services\ComposeApplyService;
 use SilverstripeLtd\AiCompose\Tests\ComposeTestElementalPage;
-use SilverstripeLtd\AiCompose\Tests\Providers\StubProviderFactory;
-use SilverstripeLtd\AiCompose\Tests\Providers\TestAIProvider;
 use SilverstripeLtd\AiCompose\Tests\RestrictedComposePage;
+use SilverstripeLtd\AiCore\Provider\ProviderFactory;
+use SilverstripeLtd\AiCore\Testing\ScriptedProvider;
+use SilverstripeLtd\AiCore\Testing\StubProviderFactory;
 use SilverStripe\CMS\Model\SiteTree;
 use SilverStripe\Core\Config\Config;
-use SilverStripe\Core\Environment;
 use SilverStripe\Core\Injector\Injector;
 use SilverStripe\Dev\FunctionalTest;
 use SilverStripe\ORM\DataObject;
@@ -48,7 +47,6 @@ class ComposeControllerTest extends FunctionalTest
         parent::setUp();
         $this->logInWithPermission('ADMIN');
         SecurityToken::enable();
-        Environment::setEnv('AI_COMPOSE_API_KEY', 'test-key');
         $this->session()->set(SecurityToken::inst()->getName(), SecurityToken::inst()->getValue());
     }
 
@@ -57,8 +55,7 @@ class ComposeControllerTest extends FunctionalTest
      */
     protected function tearDown(): void
     {
-        Injector::inst()->registerService(new ProviderFactory(), ProviderFactory::class);
-        Environment::setEnv('AI_COMPOSE_API_KEY', null);
+        Injector::inst()->unregisterNamedObject(ProviderFactory::class);
         Config::modify()->set(
             ComposeApplyService::class,
             'default_content_block_class',
@@ -202,8 +199,8 @@ class ComposeControllerTest extends FunctionalTest
      */
     public function testGenerateEndpointRejectsEmptyInputsWithoutCallingProvider(): void
     {
-        $provider = new TestAIProvider([
-            ['status' => 200, 'body' => '{"title":"Ignored","content":"<p>Ignored</p>"}'],
+        $provider = new ScriptedProvider([
+            ScriptedProvider::text('{"title":"Ignored","content":"<p>Ignored</p>"}'),
         ]);
         Injector::inst()->registerService(new StubProviderFactory($provider), ProviderFactory::class);
         $page = SiteTree::create(['Title' => 'Compose page']);
@@ -222,7 +219,7 @@ class ComposeControllerTest extends FunctionalTest
         $this->assertSame(400, $response->getStatusCode());
         $payload = json_decode((string) $response->getBody(), true);
         $this->assertSame(ComposeForm::EMPTY_INPUT_MESSAGE, $payload['error'] ?? null);
-        $this->assertSame(0, $provider->getCallCount());
+        $this->assertSame([], $provider->getRequests());
     }
 
     /**
@@ -230,12 +227,11 @@ class ComposeControllerTest extends FunctionalTest
      */
     public function testGenerateEndpointReturnsSanitisedStructuredResult(): void
     {
-        $provider = new TestAIProvider([
-            [
-                'status' => 200,
-                'body' => '{"title":"<strong>Generated title</strong>",'
-                    . '"content":"<script>alert(1)</script><p onclick=\"evil()\">Generated content</p>"}',
-            ],
+        $provider = new ScriptedProvider([
+            ScriptedProvider::text(
+                '{"title":"<strong>Generated title</strong>",'
+                . '"content":"<script>alert(1)</script><p onclick=\"evil()\">Generated content</p>"}'
+            ),
         ]);
         Injector::inst()->registerService(new StubProviderFactory($provider), ProviderFactory::class);
         $page = SiteTree::create(['Title' => 'Compose page']);
@@ -262,9 +258,7 @@ class ComposeControllerTest extends FunctionalTest
      */
     public function testGenerateEndpointReturnsGenericProviderErrorForMalformedResponse(): void
     {
-        $provider = new TestAIProvider([
-            ['status' => 200, 'body' => '{broken'],
-        ]);
+        $provider = new ScriptedProvider([ScriptedProvider::text('{broken')]);
         Injector::inst()->registerService(new StubProviderFactory($provider), ProviderFactory::class);
         $page = SiteTree::create(['Title' => 'Compose page']);
         $page->write();
