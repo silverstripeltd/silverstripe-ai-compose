@@ -125,7 +125,8 @@ class ComposeProviderSettingsTest extends SapphireTest
     }
 
     /**
-     * Confirms the shared AI_* variables apply when no compose variable is set.
+     * Confirms the shared AI_* variables apply when no compose variable is set, while the model
+     * compose configures for the selected provider still wins over the shared AI_MODEL.
      */
     public function testFallsBackToSharedVariables(): void
     {
@@ -135,7 +136,7 @@ class ComposeProviderSettingsTest extends SapphireTest
         $settings = $this->getSettings();
         $this->assertSame('anthropic', $settings->getProviderName());
         $this->assertSame('shared-key', $settings->getApiKey());
-        $this->assertSame('shared-model', $settings->getModel());
+        $this->assertSame('claude-haiku-4-5', $settings->getModel());
         $this->assertSame(4000, $settings->getMaxTokens());
     }
 
