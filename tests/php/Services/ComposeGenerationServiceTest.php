@@ -41,6 +41,39 @@ class ComposeGenerationServiceTest extends SapphireTest
     }
 
     /**
+     * Supplies provider replies that wrap the JSON object in ways models commonly do.
+     *
+     * @return array<string, array{body: string}>
+     */
+    public static function provideGenerateAcceptsWrappedJson(): array
+    {
+        $json = '{"title":"Generated title","content":"<p>Generated content</p>"}';
+        return [
+            'plain-json' => [
+                'body' => $json,
+            ],
+            'fenced-json' => [
+                'body' => "```json\n" . $json . "\n```",
+            ],
+            'leading-sentence' => [
+                'body' => "Here is the page you asked for:\n\n" . $json,
+            ],
+        ];
+    }
+
+    /**
+     * Confirms fenced or prose-wrapped JSON replies still produce a structured result.
+     */
+    #[DataProvider('provideGenerateAcceptsWrappedJson')]
+    public function testGenerateAcceptsWrappedJson(string $body): void
+    {
+        $service = $this->createService(new ScriptedProvider([ScriptedProvider::text($body)]));
+        $result = $service->generate('Write a council notice', 'Date: 15 March');
+        $this->assertSame('Generated title', $result->getTitle());
+        $this->assertSame('<p>Generated content</p>', $result->getContent());
+    }
+
+    /**
      * Supplies malformed provider responses that should be rejected.
      *
      * @return array<string, array{body: string, message: string}>
@@ -50,6 +83,10 @@ class ComposeGenerationServiceTest extends SapphireTest
         return [
             'invalid-json' => [
                 'body' => '{broken',
+                'message' => 'not valid JSON',
+            ],
+            'plain-text' => [
+                'body' => 'Sorry, I cannot write that page.',
                 'message' => 'not valid JSON',
             ],
             'non-object' => [
