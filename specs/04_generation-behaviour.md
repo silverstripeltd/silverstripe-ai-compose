@@ -73,8 +73,8 @@ Deferred to the parent DataObject - the editor must have `canEdit()` on the page
 ## Error handling
 
 - **Empty inputs:** Error message returned to the modal. No API call made.
-- **Provider failure:** `AIProviderException` caught by the controller, error toast shown in the modal.
-- **Malformed response:** `AIProviderException` thrown if the JSON is invalid or required fields are missing. Error toast shown.
+- **Provider failure:** `ProviderException` caught by the controller, error toast shown in the modal.
+- **Malformed response:** `ProviderException` thrown if the JSON is invalid or required fields are missing. Error toast shown.
 - **Elemental block class not allowed:** Error returned with configuration guidance.
 - **No suitable content field on custom block class:** Error returned with guidance.
 

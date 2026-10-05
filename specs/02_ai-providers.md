@@ -7,30 +7,30 @@ The module includes a provider abstraction layer supporting multiple AI provider
 - **Gemini** - primary provider (default). Calls the v1beta `generateContent` endpoint and includes `thinkingConfig.thinkingLevel` when `AI_COMPOSE_THINKING_LEVEL` is not `none`.
 - **OpenAI** - Chat Completions API provider
 - **Anthropic** - Messages API provider
-- **Custom providers** - the built-in factory supports `gemini`, `openai`, and `anthropic` only. To use a custom provider, projects must override the factory via Silverstripe's Injector.
+- **Custom providers** - registered by name in the ai-core `ProviderFactory.providers` YAML map.
 
-These are standalone classes with no dependencies beyond Guzzle (bundled with Silverstripe framework).
+The providers live in the shared `silverstripeltd/silverstripe-ai-core` package, which every AI module uses.
 
 ## Provider interface
 
-All providers extend `AbstractAIProvider`, which supplies the generation method and shared error handling. Concrete providers implement protected request hooks (`performRequest`, `extractResponseContent`, `isTransientStatus`, and `getDefaultModel`).
+`ComposeGenerationService` calls ai-core's `SimpleCompletion`, bound to `EnvProviderSettings::forModule('COMPOSE')`:
 
 ```php
-public function generate(string $systemPrompt, string $userPrompt): string
+public function complete(string $system, string $user, ?CompletionOptions $options = null): string
 ```
 
-Returns the raw string response from the AI provider. The compose module constructs its own prompts (see `specs/03_prompts.md`) and parses the response as JSON in the service layer.
+Returns the model's text reply. The compose module constructs its own prompts (see `specs/03_prompts.md`) and parses the response as JSON in `ComposeResponseParser`.
 
 ## Configuration
 
-Environment variables follow the same naming convention as the other AI modules:
+Environment variables follow the same naming convention as the other AI modules. Each one falls back to the shared `AI_*` variable of the same name (for example `AI_API_KEY`), and the defaults below are YAML under `SilverstripeLtd\AiCore\Settings\EnvProviderSettings.modules.COMPOSE`:
 
 | Environment variable | Description | Default |
 |---|---|---|
 | `AI_COMPOSE_PROVIDER` | Active provider (`gemini`, `openai`, `anthropic`) | `gemini` |
 | `AI_COMPOSE_API_KEY` | API key for the active provider | (required) |
-| `AI_COMPOSE_MODEL` | Model to use | Provider-specific default |
-| `AI_COMPOSE_THINKING_LEVEL` | Thinking level for Gemini | `low` |
+| `AI_COMPOSE_MODEL` | Model to use | `gemini-3.1-flash-lite`, `gpt-5-mini` or `claude-haiku-4-5` |
+| `AI_COMPOSE_THINKING_LEVEL` | Thinking level, sent to the active vendor | `low` for Gemini only |
 | `AI_COMPOSE_TEMPERATURE` | Temperature for generation | `1.0` |
 | `AI_COMPOSE_MAX_TOKENS` | Max tokens in response | `4000` |
 | `AI_COMPOSE_REQUEST_TIMEOUT` | Request timeout in seconds | `30` |
@@ -43,7 +43,8 @@ Environment variables follow the same naming convention as the other AI modules:
 
 ## Error handling
 
-- **Transient failures** (network timeout, rate limit, 5xx): `AIProviderException`
-- **Permanent failures** (invalid API key, 4xx): `AIProviderException`
-- **Malformed response** (invalid JSON, missing required keys): `AIProviderException`
+- **Transient failures** (network timeout, rate limit, 5xx): ai-core `ProviderException` with `isTransient()`
+- **Blocking failures** (missing or invalid API key, 401, 403): `ProviderException` with `isBlocking()`
+- **Permanent failures** (other 4xx): `ProviderException`
+- **Malformed response** (invalid JSON, missing required keys): `ProviderException`
 - **Callers** (controller) catch the exception and return an error response for toast display in the modal

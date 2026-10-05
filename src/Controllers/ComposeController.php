@@ -3,13 +3,13 @@
 namespace SilverstripeLtd\AiCompose\Controllers;
 
 use Psr\Log\LoggerInterface;
-use SilverstripeLtd\AiCompose\Exceptions\AIProviderException;
 use SilverstripeLtd\AiCompose\Exceptions\ComposeApplyException;
 use SilverstripeLtd\AiCompose\Extensions\AiComposeExtension;
 use SilverstripeLtd\AiCompose\Forms\ComposeForm;
 use SilverstripeLtd\AiCompose\Services\ComposeApplyService;
 use SilverstripeLtd\AiCompose\Services\ComposeContentSanitisationService;
 use SilverstripeLtd\AiCompose\Services\ComposeGenerationService;
+use SilverstripeLtd\AiCore\Provider\ProviderException;
 use SilverStripe\Admin\FormSchemaController;
 use SilverStripe\Control\Director;
 use SilverStripe\Control\HTTPRequest;
@@ -108,7 +108,7 @@ class ComposeController extends FormSchemaController
             ]);
         } catch (HTTPResponse_Exception $exception) {
             return $exception->getResponse();
-        } catch (AIProviderException $exception) {
+        } catch (ProviderException $exception) {
             $this->logProviderException($exception, $record ?? null);
             return $this->jsonResponse([
                 'error' => $this->getProviderErrorMessage($exception),
@@ -332,7 +332,7 @@ class ComposeController extends FormSchemaController
     /**
      * Chooses the provider error message that is safe to expose to the current environment.
      */
-    private function getProviderErrorMessage(AIProviderException $exception): string
+    private function getProviderErrorMessage(ProviderException $exception): string
     {
         if ($this->shouldExposeProviderErrors()) {
             return $exception->getMessage();
@@ -352,7 +352,7 @@ class ComposeController extends FormSchemaController
     /**
      * Logs the original provider exception with record context for debugging.
      */
-    private function logProviderException(AIProviderException $exception, ?DataObject $record): void
+    private function logProviderException(ProviderException $exception, ?DataObject $record): void
     {
         $this->getLogger()->error('Compose provider request failed', [
             'exception' => $exception,

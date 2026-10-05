@@ -4,10 +4,10 @@
     "type": "silverstripe-vendormodule",
     "require": {
         "php": "^8.3",
-        "silverstripe/framework": "^6.1",
+        "silverstripe/framework": "^6.2",
         "silverstripe/cms": "^6",
         "silverstripe/admin": "^3",
-        "guzzlehttp/guzzle": "^7.0"
+        "silverstripeltd/silverstripe-ai-core": "^0.1"
     },
     "require-dev": {
         "squizlabs/php_codesniffer": "^3",
@@ -16,6 +16,12 @@
         "silverstripe/behat-extension": "^6",
         "slevomat/coding-standard": "^8"
     },
+    "repositories": [
+        {
+            "type": "git",
+            "url": "https://github.com/silverstripeltd/silverstripe-ai-core.git"
+        }
+    ],
     "autoload": {
         "psr-4": {
             "SilverstripeLtd\\AiCompose\\": "src/"

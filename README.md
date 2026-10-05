@@ -57,13 +57,22 @@ The module sanitises generated HTML server-side before any Draft write and strip
 
 All configuration is via environment variables, for example in your webserver environment or `.env`. Restart the webserver after changing any values.
 
+Provider calls go through the shared [`silverstripeltd/silverstripe-ai-core`](https://github.com/silverstripeltd/silverstripe-ai-core) package. Every `AI_COMPOSE_*` variable below falls back to the shared `AI_*` variable of the same name (`AI_PROVIDER`, `AI_API_KEY`, `AI_MODEL`, ...), so one key in `.env` can drive every AI module on the site. A compose variable always wins over the shared one. The shared `AI_API_KEY` and `AI_MODEL` are ignored while `AI_COMPOSE_PROVIDER` names a different provider than `AI_PROVIDER`.
+
 ### Provider
 
-Set the active AI provider and API key. Gemini, OpenAI, and Anthropic are supported out of the box. Custom providers can be added by extending `AbstractAIProvider` and overriding the factory via Injector.
+Set the active AI provider and API key. Gemini, OpenAI, and Anthropic are supported out of the box. Custom providers can be registered in the ai-core `ProviderFactory.providers` map.
 
 ```bash
 AI_COMPOSE_PROVIDER=gemini                # gemini (default), openai, or anthropic
 AI_COMPOSE_API_KEY=your-api-key           # API key for the chosen provider
+```
+
+Or, shared with the other AI modules:
+
+```bash
+AI_PROVIDER=anthropic
+AI_API_KEY=your-api-key
 ```
 
 ### Model
@@ -71,14 +80,26 @@ AI_COMPOSE_API_KEY=your-api-key           # API key for the chosen provider
 Control which model is used and how it generates responses. All settings are optional and have sensible defaults.
 
 ```bash
-AI_COMPOSE_MODEL=gemini-2.5-flash         # Model identifier (provider-specific)
-AI_COMPOSE_THINKING_LEVEL=low             # Thinking effort for Gemini: none, low, medium, or high
+AI_COMPOSE_MODEL=gemini-3.1-flash-lite    # Model identifier (provider-specific)
+AI_COMPOSE_THINKING_LEVEL=low             # Thinking effort passed to the active vendor, or none
 AI_COMPOSE_TEMPERATURE=1.0                # Sampling temperature
 AI_COMPOSE_MAX_TOKENS=4000                # Max tokens in AI response
 AI_COMPOSE_REQUEST_TIMEOUT=30             # Timeout per AI request in seconds
 ```
 
 Compose returns a full title plus page body, so longer pages may need `AI_COMPOSE_MAX_TOKENS` increased.
+
+The default models are `gemini-3.1-flash-lite` (Gemini), `gpt-5-mini` (OpenAI) and `claude-haiku-4-5` (Anthropic). Without `AI_COMPOSE_THINKING_LEVEL` only Gemini receives a thinking level (`low`); when the variable is set it is sent to whichever vendor is active (Anthropic effort, OpenAI `reasoning_effort`, Gemini `thinkingLevel`), so pick a value that model accepts. The defaults live in YAML and can be changed per project:
+
+```yaml
+SilverstripeLtd\AiCore\Settings\EnvProviderSettings:
+  modules:
+    COMPOSE:
+      max_tokens: 6000
+      providers:
+        anthropic:
+          model: claude-sonnet-5-5
+```
 
 ---
 

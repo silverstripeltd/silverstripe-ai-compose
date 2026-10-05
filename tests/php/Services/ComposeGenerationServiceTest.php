@@ -3,14 +3,15 @@
 namespace SilverstripeLtd\AiCompose\Tests\Services;
 
 use PHPUnit\Framework\Attributes\DataProvider;
-use SilverstripeLtd\AiCompose\Exceptions\AIProviderException;
 use SilverstripeLtd\AiCompose\Services\ComposeGenerationService;
 use SilverstripeLtd\AiCompose\Services\ComposeResponseParser;
 use SilverstripeLtd\AiCompose\Services\PromptService;
 use SilverstripeLtd\AiCompose\Tests\ComposeTestSiteConfig;
-use SilverstripeLtd\AiCompose\Tests\Providers\StubProviderFactory;
-use SilverstripeLtd\AiCompose\Tests\Providers\TestAIProvider;
-use SilverStripe\Core\Environment;
+use SilverstripeLtd\AiCore\Completion\SimpleCompletion;
+use SilverstripeLtd\AiCore\Provider\ProviderException;
+use SilverstripeLtd\AiCore\Settings\EnvProviderSettings;
+use SilverstripeLtd\AiCore\Testing\ScriptedProvider;
+use SilverstripeLtd\AiCore\Testing\StubProviderFactory;
 use SilverStripe\Dev\SapphireTest;
 
 /**
@@ -19,46 +20,57 @@ use SilverStripe\Dev\SapphireTest;
 class ComposeGenerationServiceTest extends SapphireTest
 {
     /**
-     * Configure provider auth for generation tests.
-     */
-    protected function setUp(): void
-    {
-        parent::setUp();
-        Environment::setEnv('AI_COMPOSE_API_KEY', 'test-key');
-    }
-
-    /**
-     * Reset provider auth after generation tests.
-     */
-    protected function tearDown(): void
-    {
-        Environment::setEnv('AI_COMPOSE_API_KEY', null);
-        parent::tearDown();
-    }
-
-    /**
      * Confirms generation returns a structured title and content pair.
      */
     public function testGenerateReturnsStructuredResult(): void
     {
-        $provider = new TestAIProvider([
-            [
-                'status' => 200,
-                'body' => '{"title":"Generated title","content":"<p>Generated content</p>"}',
-            ],
+        $provider = new ScriptedProvider([
+            ScriptedProvider::text('{"title":"Generated title","content":"<p>Generated content</p>"}'),
         ]);
-        $service = new ComposeGenerationService(
-            new StubProviderFactory($provider),
-            new PromptService(new ComposeTestSiteConfig()),
-            new ComposeResponseParser()
-        );
+        $service = $this->createService($provider);
 
         $result = $service->generate('Write a council notice', 'Date: 15 March');
 
         $this->assertSame('Generated title', $result->getTitle());
         $this->assertSame('<p>Generated content</p>', $result->getContent());
-        $this->assertStringContainsString('Write a council notice', (string) $provider->getLastUserPrompt());
-        $this->assertStringContainsString('Date: 15 March', (string) $provider->getLastUserPrompt());
+        $userPrompt = $provider->getLastRequest()->messages[0]->getText();
+        $this->assertCount(1, $provider->getRequests());
+        $this->assertStringContainsString('Write a council notice', $userPrompt);
+        $this->assertStringContainsString('Date: 15 March', $userPrompt);
+        $this->assertNotSame('', $provider->getLastRequest()->system);
+    }
+
+    /**
+     * Supplies provider replies that wrap the JSON object in ways models commonly do.
+     *
+     * @return array<string, array{body: string}>
+     */
+    public static function provideGenerateAcceptsWrappedJson(): array
+    {
+        $json = '{"title":"Generated title","content":"<p>Generated content</p>"}';
+        return [
+            'plain-json' => [
+                'body' => $json,
+            ],
+            'fenced-json' => [
+                'body' => "```json\n" . $json . "\n```",
+            ],
+            'leading-sentence' => [
+                'body' => "Here is the page you asked for:\n\n" . $json,
+            ],
+        ];
+    }
+
+    /**
+     * Confirms fenced or prose-wrapped JSON replies still produce a structured result.
+     */
+    #[DataProvider('provideGenerateAcceptsWrappedJson')]
+    public function testGenerateAcceptsWrappedJson(string $body): void
+    {
+        $service = $this->createService(new ScriptedProvider([ScriptedProvider::text($body)]));
+        $result = $service->generate('Write a council notice', 'Date: 15 March');
+        $this->assertSame('Generated title', $result->getTitle());
+        $this->assertSame('<p>Generated content</p>', $result->getContent());
     }
 
     /**
@@ -71,6 +83,10 @@ class ComposeGenerationServiceTest extends SapphireTest
         return [
             'invalid-json' => [
                 'body' => '{broken',
+                'message' => 'not valid JSON',
+            ],
+            'plain-text' => [
+                'body' => 'Sorry, I cannot write that page.',
                 'message' => 'not valid JSON',
             ],
             'non-object' => [
@@ -98,17 +114,25 @@ class ComposeGenerationServiceTest extends SapphireTest
     #[DataProvider('provideGenerateRejectsMalformedProviderResponses')]
     public function testGenerateRejectsMalformedProviderResponses(string $body, string $message): void
     {
-        $provider = new TestAIProvider([
-            ['status' => 200, 'body' => $body],
-        ]);
-        $service = new ComposeGenerationService(
-            new StubProviderFactory($provider),
+        $service = $this->createService(new ScriptedProvider([ScriptedProvider::text($body)]));
+
+        $this->expectException(ProviderException::class);
+        $this->expectExceptionMessage($message);
+        $service->generate('Write a council notice', 'Date: 15 March');
+    }
+
+    /**
+     * Builds a generation service whose provider calls go to the given scripted provider.
+     */
+    private function createService(ScriptedProvider $provider): ComposeGenerationService
+    {
+        return new ComposeGenerationService(
+            SimpleCompletion::create(
+                EnvProviderSettings::forModule(ComposeGenerationService::SETTINGS_PREFIX),
+                new StubProviderFactory($provider)
+            ),
             new PromptService(new ComposeTestSiteConfig()),
             new ComposeResponseParser()
         );
-
-        $this->expectException(AIProviderException::class);
-        $this->expectExceptionMessage($message);
-        $service->generate('Write a council notice', 'Date: 15 March');
     }
 }
